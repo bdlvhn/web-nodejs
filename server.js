@@ -2,9 +2,12 @@ const express = require("express");
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.set("view engine", "ejs");
+app.use("/public", express.static("public"));
+const MongoClient = require("mongodb").MongoClient;
+const methodOverride = require("method-override");
+app.use(methodOverride("_method"));
 
 let db;
-const MongoClient = require("mongodb").MongoClient;
 MongoClient.connect(
   "mongodb+srv://admin:tmxkqjrtm4500!@cluster0.2c5cw.mongodb.net/myFirstDatabase?retryWrites=true&w=majority",
   (error, client) => {
@@ -18,11 +21,11 @@ app.listen(8080, function () {
 });
 
 app.get("/", (req, res) => {
-  res.sendFile(__dirname + "/index.html");
+  res.render("index.ejs");
 });
 
 app.get("/write", (req, res) => {
-  res.sendFile(__dirname + "/write.html");
+  res.render("write.ejs");
 });
 
 app.get("/pet", function (req, res) {
@@ -65,7 +68,35 @@ app.get("/list", (req, res) => {
 app.delete("/delete", (req, res) => {
   req.body._id = parseInt(req.body._id);
   db.collection("post").deleteOne(req.body, (error, result) => {
-    console.log("delete complete");
     res.status(200).send({ message: "done" });
+    res.render("list.ejs");
   });
+});
+
+app.get("/detail/:id", (req, res) => {
+  db.collection("post").findOne(
+    { _id: parseInt(req.params.id) },
+    (error, result) => {
+      res.render("detail.ejs", { data: result });
+    }
+  );
+});
+
+app.get("/edit/:id", (req, res) => {
+  db.collection("post").findOne(
+    { _id: parseInt(req.params.id) },
+    (error, result) => {
+      res.render("edit.ejs", { data: result });
+    }
+  );
+});
+
+app.put("/edit", (req, res) => {
+  db.collection("post").updateOne(
+    { _id: parseInt(req.body.id) },
+    { $set: { title: req.body.title, date: req.body.date } },
+    (error, result) => {
+      res.redirect("/list");
+    }
+  );
 });
