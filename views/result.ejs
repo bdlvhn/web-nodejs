@@ -28,24 +28,7 @@
     </div>
     <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
     <script>
-      $('#search').click(() => {
-        var inputValue = $('#search-input').val();
-        window.location.replace(`/search?value=${inputValue}`);
-      })
 
-      $('.delete').click((e) => {
-        var postId = e.target.dataset.id;
-        $.ajax({
-        method : 'DELETE',
-        url : '/delete',
-        data : {_id : postId}
-      }).done((res) => {
-        console.log('you done');
-        $(this).parent('li').fadeOut();
-      }).fail(() => {
-        console.log('you failed');
-      });
-      })
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js" integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN" crossorigin="anonymous"></script>
