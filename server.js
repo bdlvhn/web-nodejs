@@ -43,41 +43,12 @@ app.get("/beauty", function (req, res) {
   res.send("뷰티 용품 쇼핑할 수 있는 페이지입니다.");
 });
 
-app.post("/add", (req, res) => {
-  console.log(req.body);
-  res.send("전송 완료");
-  db.collection("counter").findOne({ name: "게시물갯수" }, (error, result) => {
-    let totalPost = result.totalPost;
-    db.collection("post").insertOne(
-      { _id: totalPost + 1, date: req.body.date, title: req.body.title },
-      (error, res) => {
-        console.log("저장 완료");
-        db.collection("counter").updateOne(
-          { name: "게시물갯수" },
-          { $inc: { totalPost: 1 } },
-          (error, result) => {
-            if (error) return console.log(error);
-          }
-        );
-      }
-    );
-  });
-});
-
 app.get("/list", (req, res) => {
   db.collection("post")
     .find()
     .toArray((error, result) => {
       res.render("list.ejs", { posts: result });
     });
-});
-
-app.delete("/delete", (req, res) => {
-  req.body._id = parseInt(req.body._id);
-  db.collection("post").deleteOne(req.body, (error, result) => {
-    res.status(200).send({ message: "done" });
-    res.render("list.ejs");
-  });
 });
 
 app.get("/detail/:id", (req, res) => {
@@ -136,7 +107,7 @@ function isLogin(req, res, next) {
 
 app.get("/search", (req, res) => {
   db.collection("post")
-    .find({ title: req.query.value })
+    .find({ title: /req.query.value/ })
     .toArray((error, result) => {
       res.render("result.ejs", { posts: result });
     });
@@ -177,3 +148,48 @@ passport.deserializeUser((id, done) => {
     done(null, result);
   });
 });
+
+app.post("/register", (req, res) => {
+  db.collection("login").insertOne(
+    { id: req.body.id, pw: req.body.pw },
+    (error, result) => {
+      res.redirect("/");
+    }
+  );
+});
+
+app.post("/add", (req, res) => {
+  res.send("전송 완료");
+  db.collection("counter").findOne({ name: "게시물갯수" }, (error, result) => {
+    let totalPost = result.totalPost;
+    let info = {
+      _id: totalPost + 1,
+      userId: req.user._id,
+      date: req.body.date,
+      title: req.body.title,
+    };
+
+    db.collection("post").insertOne(info, (error, res) => {
+      console.log("저장 완료");
+      db.collection("counter").updateOne(
+        { name: "게시물갯수" },
+        { $inc: { totalPost: 1 } },
+        (error, result) => {
+          if (error) return console.log(error);
+        }
+      );
+    });
+  });
+});
+
+app.delete("/delete", (req, res) => {
+  var deleteData = { _id: parseInt(req.body._id), userId: req.user._id };
+
+  db.collection("post").deleteOne(deleteData, (error, result) => {
+    res.status(200).send({ message: "done" });
+    res.render("list.ejs", { posts: result });
+  });
+});
+
+app.use("/shop", require("./routes/shop.js"));
+app.use("/board", require("./routes/board.js"));
