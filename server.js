@@ -17,6 +17,17 @@ app.use(passport.initialize());
 app.use(passport.session());
 require("dotenv").config();
 
+let multer = require("multer");
+var storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "./public/image");
+  },
+  filename: (req, file, cb) => {
+    cb(null, file.originalname);
+  },
+});
+var upload = multer({ storage: storage });
+
 let db;
 MongoClient.connect(process.env.DB_URL, (error, client) => {
   if (error) return console.log(error);
@@ -189,6 +200,18 @@ app.delete("/delete", (req, res) => {
     res.status(200).send({ message: "done" });
     res.render("list.ejs", { posts: result });
   });
+});
+
+app.get("/upload", (req, res) => {
+  res.render("upload.ejs");
+});
+
+app.post("/upload", upload.single("profile"), (req, res) => {
+  res.send("upload complete");
+});
+
+app.get("/image/:imageName", (req, res) => {
+  res.sendFile(__dirname + "/public/image/" + req.params.imageName);
 });
 
 app.use("/shop", require("./routes/shop.js"));
