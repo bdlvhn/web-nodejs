@@ -22,12 +22,22 @@
             <h4>할일 제목 : <%= posts[i].title %><h4>
             <p>할일 마감 날짜 : <%= posts[i].date %></p>
             <button class="btn btn-danger delete" data-id="<%= posts[i]._id %>">삭제</button>
+              <button class="btn btn-secondary chat" data-id="<%= posts[i].userId %>">채팅</button>
           </li>
         <% } %>
       </ul>
     </div>
     <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
     <script>
+
+      $('.chat').click((e) => {
+        const id = e.target.dataset.id;
+        $.post('/chatroom', {chatee : id}).then(() => {
+          console.log('success')
+      })
+    })
+      
+
       $('#search').click(() => {
         var inputValue = $('#search-input').val();
         window.location.replace(`/search?value=${inputValue}`);

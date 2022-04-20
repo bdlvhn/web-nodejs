@@ -16,6 +16,9 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 require("dotenv").config();
+const http = require("http").createServer(app);
+const { Server } = require("socket.io");
+const io = new Server(http);
 
 let multer = require("multer");
 var storage = multer.diskStorage({
@@ -27,14 +30,16 @@ var storage = multer.diskStorage({
   },
 });
 var upload = multer({ storage: storage });
+const { ObjectId } = require("mongodb");
 
+//
 let db;
 MongoClient.connect(process.env.DB_URL, (error, client) => {
   if (error) return console.log(error);
   db = client.db("todoapp");
 });
 
-app.listen(process.env.PORT, function () {
+http.listen(process.env.PORT, function () {
   console.log("listening on 8080");
 });
 
@@ -214,5 +219,87 @@ app.get("/image/:imageName", (req, res) => {
   res.sendFile(__dirname + "/public/image/" + req.params.imageName);
 });
 
+app.post("/chatroom", isLogin, (req, res) => {
+  var save = {
+    title: "chatroom",
+    member: [ObjectId(req.body.chatee), req.user._id],
+    date: new Date(),
+  };
+
+  db.collection("chatroom")
+    .insertOne(save)
+    .then((result) => {
+      res.send("success");
+    });
+});
+
+app.get("/chat", isLogin, (req, res) => {
+  db.collection("chatroom")
+    .find({ member: req.user._id })
+    .toArray()
+    .then((result) => {
+      res.render("chat.ejs", { data: result });
+    });
+});
+
+app.post("/message", isLogin, (req, res) => {
+  const toSend = {
+    parent: req.body.parent,
+    content: req.body.content,
+    userId: req.user._id,
+    date: new Date(),
+  };
+  db.collection("message")
+    .insertOne(toSend)
+    .then(() => {
+      console.log("db save success");
+      res.send("db save success");
+    });
+});
+
+app.get("/message/:id", isLogin, (req, res) => {
+  res.writeHead(200, {
+    Connection: "keep-alive",
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+  });
+
+  db.collection("message")
+    .find({ parent: req.params.id })
+    .toArray()
+    .then((result) => {
+      res.write("event: test\n");
+      res.write(`data : ${JSON.stringify(result)}\n\n`);
+    });
+
+  const pipeline = [{ $match: { "fullDocument.parent": req.params.id } }];
+  const changeStream = db.collection("message").watch(pipeline);
+
+  changeStream.on("change", (result) => {
+    res.write("event: test\n");
+    res.write(`data : ${JSON.stringify([result.fullDocument])}\n\n`);
+  });
+});
+
+app.get("/socket", (req, res) => {
+  res.render("socket.ejs");
+});
+
 app.use("/shop", require("./routes/shop.js"));
 app.use("/board", require("./routes/board.js"));
+
+io.on("connection", function (socket) {
+  console.log("user login");
+
+  socket.on("joinroom", function (data) {
+    socket.join("room1");
+  });
+
+  socket.on("room1-send", function (data) {
+    io.to("room1").emit("broadcast", data);
+  });
+
+  socket.on("user-send", function (data) {
+    io.emit("broadcast", data);
+  });
+});
